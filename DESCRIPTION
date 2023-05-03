@@ -1,0 +1,13 @@
+Package: DeepComBat
+Title: DeepComBat Image Harmonization
+Version: 0.0.0.9000
+Authors@R: 
+    person("Fengling", "Hu", , "fengling.hu@pennmedicine.upenn.edu", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-1081-5038"))
+Maintainer: Fengling Hu <fengling.hu@pennmedicine.upenn.edu>
+Description: Provides open-source code to apply the DeepComBat algorithm. Details of the method are described in more detail here: https://www.biorxiv.org/content/10.1101/2023.04.24.537396v1. NeuroCombat dependency can be installed here: https://github.com/Jfortin1/neuroCombat_Rpackage.
+Depends: torch, coro, neuroCombat, grDevices, graphics
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
