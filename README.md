@@ -37,7 +37,44 @@ The `DeepComBat` package provides four main functions for end-users.
 
 `deepcombat_setup()` is used to set up inputs for DeepComBat as well as initialize the DeepComBat CVAE. `deepcombat_train()` provides functionality for training the DeepComBat CVAE from the initialized `deepcombat_setup()` object. Finally, `deepcombat_harmonize()` takes outputs from `deepcombat_setup()` and `deepcombat_train()` and allows users to pass data through the trained DeepComBat CVAE and harmonize the data.
 
+Example code is provided below:
+```
+setup <- deepcombat_setup(~ age + sex + diagnosis, 
+                          ~ scanner, 
+                          data, 
+                          covariates) # data frame with columns: age, sex, diagnosis, scanner
+trained_model <- deepcombat_trainer(setup, verbose = TRUE)
+harmonized <- deepcombat_harmonize(setup, trained_model)
+```
+
 If users seek to use DeepComBat for external harmonization (ie train DeepComBat on part of the data and use the trained model to harmonize other data), `deepcombat_setup_from_train()` can be used. Then, `deepcombat_harmonize()` takes outputs from `deepcombat_setup_from_train()`, `deepcombat_train()`, and `deepcombat_harmonize()` run on the training data. For external harmonization DeepComBat, all estimation is conducted on the training data, including standardization, CVAE parameters, latent space ComBat, and residual ComBat.
+
+If external harmonization is desired, we recommend using a regularized version of DeepComBat to improve out-of-sample performance. This can be accomplished by setting the `use_default_optim` parameter in `deepcombat_setup()` to "FALSE" and using the AdamW optimizer instead of the Adam optimizer (default) -- to do so, set the `optimizer` parameter in `deepcombat_trainer()` to `optim_adamw(setup_train$cvae$parameters, lr = 0.01))`
+
+```
+# Train model using training data
+setup_train <- deepcombat_setup(~ age + sex + diagnosis, 
+                          ~ scanner, 
+                          data_train, 
+                          covariates_train, # data frame with columns: age, sex, diagnosis, scanner
+                          use_default_optim = FALSE)
+trained_model <- deepcombat_trainer(setup_train, # Train DeepComBat CVAE using training data
+                                    verbose = TRUE, 
+                                    optimizer = optim_adamw(setup_train$cvae$parameters, lr = 0.01))
+harmonized_train <- deepcombat_harmonize(setup_train, 
+                                         trained_model) # Estimate latent space and residual ComBat
+
+# Apply trained model to external data
+setup_external <- deepcombat_setup_from_train(setup_train, 
+                                              ~ age + sex + diagnosis, 
+                                              ~ scanner, 
+                                              data_external, 
+                                              covariates_external) # Set up input matrices
+harmonized_external <- deepcombat_harmonize(setup_external, 
+                                            trained_model, 
+                                            harmonized_train, 
+                                            verbose = TRUE) # Pass external data through trained DeepComBat
+```
 
 ## 4. Citation
 If you are using DeepComBat for harmonization, please cite the following article:
