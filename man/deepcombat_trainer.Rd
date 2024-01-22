@@ -37,13 +37,13 @@ Finally, it performs a few post-training epochs at the desired KL-divergence wei
 \examples{
 \dontrun{
 # If Adam optimizer with default settings is desired
-cvae_model <- deepcombat_trainer(setup_obj, train_epochs = c(5, 30, 5), 
+cvae_model <- deepcombat_trainer(setup_obj, train_epochs = c(5, 30, 5),
 anneal_rate = 5, lambda = 0.1, optimizer = NULL, verbose = TRUE)
 
-# If alternate optimizer, such as SGD, is desired. 
+# If alternate optimizer, such as SGD, is desired.
 # First parameter of alternate optimizers should be setup$cvae$parameters
-cvae_model <- deepcombat_trainer(setup_obj, train_epochs = c(5, 30, 5), 
-anneal_rate = 5, lambda = 0.1, 
+cvae_model <- deepcombat_trainer(setup_obj, train_epochs = c(5, 30, 5),
+anneal_rate = 5, lambda = 0.1,
 optimizer = optim_sgd(setup$cvae$parameters, lr = 0.1), verbose = TRUE)
 }
 }

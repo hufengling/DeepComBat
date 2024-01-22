@@ -1,5 +1,5 @@
 #' DeepComBat CVAE Trainer
-#' 
+#'
 #' This function trains the DeepComBat conditional variational autoencoder (CVAE). It first pre-trains a standard autoencoder without a KL-divergence loss function component.
 #' Then, it performs a series of cyclic annealing cycles to gradually increase KL-divergence weighting to the desired KL-divergence while minimizing risk of posterior collapse.
 #' Finally, it performs a few post-training epochs at the desired KL-divergence weight.
@@ -8,7 +8,7 @@
 #' @param train_epochs a vector of length 3 specifying the number of epochs for pre-training, cyclic annealing, and post-annealing training, respectively. Larger datasets may converge with fewer total epochs while smaller datasets may require more. Default is c(5, 30, 5).
 #' @param anneal_rate an integer indicating the number of epochs per cyclic annealing cycle. Default is 5, indicating KL-divergence weight increases linearly from 0 to lambda over 5 epochs.
 #' @param lambda a scalar indicating the desired final weight for the KL divergence loss term during training. Default is 0.1.
-#' @param optimizer an optimizer object from the torch package to be used during training. Default is NULL, which uses the Adam optimizer provided by 'setup'. 
+#' @param optimizer an optimizer object from the torch package to be used during training. Default is NULL, which uses the Adam optimizer provided by 'setup'.
 #' @param verbose a logical value indicating whether to print progress updates during training. Default is FALSE.
 #'
 #' @return Returns the trained CVAE model.
@@ -17,37 +17,37 @@
 #' @examples
 #' \dontrun{
 #' # If Adam optimizer with default settings is desired
-#' cvae_model <- deepcombat_trainer(setup_obj, train_epochs = c(5, 30, 5), 
+#' cvae_model <- deepcombat_trainer(setup_obj, train_epochs = c(5, 30, 5),
 #' anneal_rate = 5, lambda = 0.1, optimizer = NULL, verbose = TRUE)
-#' 
-#' # If alternate optimizer, such as SGD, is desired. 
+#'
+#' # If alternate optimizer, such as SGD, is desired.
 #' # First parameter of alternate optimizers should be setup$cvae$parameters
-#' cvae_model <- deepcombat_trainer(setup_obj, train_epochs = c(5, 30, 5), 
-#' anneal_rate = 5, lambda = 0.1, 
+#' cvae_model <- deepcombat_trainer(setup_obj, train_epochs = c(5, 30, 5),
+#' anneal_rate = 5, lambda = 0.1,
 #' optimizer = optim_sgd(setup$cvae$parameters, lr = 0.1), verbose = TRUE)
 #'}
 #' @import torch
 #' @importFrom coro loop
-deepcombat_trainer <- function(setup, train_epochs = c(5, 30, 5), 
-                               anneal_rate = 5, lambda = 0.1, 
+deepcombat_trainer <- function(setup, train_epochs = c(5, 30, 5),
+                               anneal_rate = 5, lambda = 0.1,
                                optimizer = NULL,
                                verbose = FALSE) {
-  stopifnot("Must give a vector of length 3 to 'train_epochs'. First element dictates number of pretraining epochs. Second element dictates number of cyclic annealing epochs. Third element dictates number of post-annealing epochs."= 
+  stopifnot("Must give a vector of length 3 to 'train_epochs'. First element dictates number of pretraining epochs. Second element dictates number of cyclic annealing epochs. Third element dictates number of post-annealing epochs."=
               length(train_epochs) == 3)
-  stopifnot("All elements of train_epoch must be integers greater than 0"= 
+  stopifnot("All elements of train_epoch must be integers greater than 0"=
               all(train_epochs %% 1 == 0) & all(train_epochs > 0))
   stopifnot("Must pass output from deepcombat_setup."=
               class(setup) == "deepcombat_setup_object")
   stopifnot("If non-default optimizer is desired, please provide a torch optimizer here."=
               !is.null(setup$optimizer) | !is.null(optimizer))
-  
+
   # Helper function to perform individual training sets (pretrain, cyclic annealing, posttraining)
   trainer <- function(torch_dl, torch_model, torch_optim,
-                      n_epochs, lambda = 1, 
+                      n_epochs, lambda = 1,
                       anneal_rate, verbose = FALSE) {
-    
+
     torch_model$train()
-    
+
     # Calculate how much to scale beta according to anneal rate
     anneal_item_rate <- torch_dl$.length() * anneal_rate
     anneal_recorder <- 0
@@ -56,21 +56,21 @@ deepcombat_trainer <- function(setup, train_epochs = c(5, 30, 5),
     if (anneal_rate <= 0) {
       beta_scale_factor <- 1
     }
-    
+
     for (epoch in 1:n_epochs) {
       loss_recorder <- numeric(2)
-      
+
       coro::loop(for (item in torch_dl) {
         torch_optim$zero_grad()
         output <- torch_model(item)
         vae_transform_list <- torch_model$get_vae_transforms(output)
-        
+
         ## KL divergence between subjects and prior
         loss_prior <- torch_model$get_prior_loss(vae_transform_list) / vae_transform_list$n_minibatch
-        
+
         ## MSE
         loss_recon <- torch_model$get_recon_loss(vae_transform_list, item[[1]]) / vae_transform_list$n_minibatch
-        
+
         ## Full loss
         if (anneal_rate > 0) {
           beta_scale_factor <- (anneal_recorder %% (anneal_item_rate + 1)) / anneal_item_rate
@@ -81,46 +81,46 @@ deepcombat_trainer <- function(setup, train_epochs = c(5, 30, 5),
             anneal_recorder <- anneal_recorder + 1
           }
         }
-        
+
         full_loss <- loss_recon + beta_scale_factor * lambda * loss_prior
-        
+
         full_loss$backward()
         torch_optim$step()
-        
+
         loss_recorder <- loss_recorder + c(as.numeric(loss_recon),
                                            as.numeric(beta_scale_factor * lambda * loss_prior))
       })
       gc()
       if (verbose) {
-        print(paste0("Loss at epoch ", epoch, ": ", 
-                     round(sum(loss_recorder), 3), 
-                     " (MSE, KLD): (", 
+        print(paste0("Loss at epoch ", epoch, ": ",
+                     round(sum(loss_recorder), 3),
+                     " (MSE, KLD): (",
                      paste(round(loss_recorder, 3), collapse = ", "), ")"))
       }
     }
-    return(list(model = torch_model, 
+    return(list(model = torch_model,
                 optim = torch_optim,
                 final_recon_loss = round(loss_recorder[1], 3)))
   }
-  
+
   torch_dl <- setup$dataloader
   torch_model <- setup$cvae
   if (!is.null(optimizer))
     torch_optim <- optimizer
   else
     torch_optim <- setup$optimizer
-  
+
   # Pretraining with no KL divergence and no annealing
   pretrained <- trainer(torch_dl = torch_dl,
                         torch_model = torch_model,
                         torch_optim = torch_optim,
-                        n_epochs = train_epochs[1], 
+                        n_epochs = train_epochs[1],
                         lambda = 0,
                         anneal_rate = 0,
                         verbose = verbose)
   pretrained_model <- pretrained$model
   pretrained_optim <- pretrained$optim
-  
+
   # Cyclic annealing of KL divergence weight
   trained <- trainer(torch_dl = torch_dl,
                      torch_model = torch_model,
@@ -130,15 +130,15 @@ deepcombat_trainer <- function(setup, train_epochs = c(5, 30, 5),
                      verbose = verbose)
   model <- trained$model
   optim <- trained$optim
-  
+
   # Final training at desired final KL divergence weight
   posttrained <- trainer(torch_dl = torch_dl,
                          torch_model = torch_model,
                          torch_optim = torch_optim,
                          n_epochs = train_epochs[3], lambda = lambda,
-                         anneal_rate = 0, 
+                         anneal_rate = 0,
                          verbose = verbose)
-  
+
   return(posttrained$model)
 }
 
@@ -146,8 +146,9 @@ deepcombat_trainer <- function(setup, train_epochs = c(5, 30, 5),
 #'
 #' This function performs harmonization using DeepComBat. It takes in a setup object and a trained DeepComBat CVAE model, and returns the harmonized output.
 #'
-#' @param setup A deepcombat_setup_object.
+#' @param setup_obj A deepcombat_setup_object.
 #' @param trained_model A trained DeepComBat CVAE model from deepcombat_trainer.
+#' @param harmonize_obj Optional output from deepcombat_harmonize run on the training data. This output contains the pre-trained DeepComBat model as well as latent-space and residual ComBat estimands from the training data.
 #' @param plot_logvars A logical value indicating whether to plot the density of logvars according to dimension -- this may be useful for manual hyperparameter tuning. Default is FALSE.
 #' @param verbose A logical value indicating whether to print progress messages. Default is FALSE.
 #'
@@ -156,44 +157,57 @@ deepcombat_trainer <- function(setup, train_epochs = c(5, 30, 5),
 #'
 #' @examples
 #' \dontrun{
-#' harmonized_output <- deepcombat_harmonize(setup_obj, trained_model, 
+#' harmonized_output <- deepcombat_harmonize(setup_obj, trained_model,
 #' plot_logvars = TRUE, verbose = TRUE)
 #' }
-#' 
+#'
 #' @import torch
 #' @import graphics
 #' @import grDevices
-deepcombat_harmonize <- function(setup, trained_model,
+deepcombat_harmonize <- function(setup_obj, trained_model,
+                                 harmonize_obj = NULL,
                                  plot_logvars = FALSE, verbose = FALSE) {
   # Condition checking
   stopifnot("Must pass output from deepcombat_setup."=
-              class(setup) == "deepcombat_setup_object")
+              class(setup_obj) == "deepcombat_setup_object")
   stopifnot("Must pass output from deepcombat_trainer."=
               "DeepComBat CVAE" %in% class(trained_model))
-  
+
   # Perform harmonization
   trained_model$eval()
-  harmonized_output <- trained_model$harmonize(setup,
-                                               correct = c("combat", "combat"),
-                                               verbose = verbose)
+  if (is.null(harmonize_obj)) {
+    harmonized_output <- trained_model$harmonize(setup_obj,
+                                                 correct = c("combat", "combat"),
+                                                 verbose = verbose)
+  } else if (class(harmonize_obj) == "deepcombat_harmonize_object") {
+    if (verbose)
+      message("Harmonizing using harmonize_obj estimates")
+
+    harmonized_output <- trained_model$harmonize_from_train(setup_obj,
+                                                            harmonize_obj,
+                                                            correct = c("combat", "combat"),
+                                                            verbose = verbose)
+  } else {
+    stop("To harmonize from training data, the deepcombat_harmonize_object output from deepcombat_harmonize() must be included.")
+  }
   # Helper function to plot density of logvars according to dimension (for hyperparameter tuning)
   logvar_plotter <- function(harmonized_output) {
     logvar_matrix <- as.matrix(harmonized_output$latent_logvar)
     d <- apply(logvar_matrix, 2, density)
-    
+
     xlim <- range(sapply(d, "[[", "x"))
     ylim <- range(sapply(d, "[[", "y"))
     plot(NA, xlim = xlim, ylim = ylim, ylab = "density")
-    
+
     nc <- ncol(logvar_matrix)
     cols <- rainbow(nc)
     for(i in 1:nc) lines(d[[i]], col = cols[i])
   }
-  
+
   # Plot logvars if desired
   if (plot_logvars) {
     logvar_plotter(harmonized_output)
   }
-  
+
   harmonized_output
 }

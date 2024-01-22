@@ -4,7 +4,14 @@
 \alias{deepcombat_cvae}
 \title{DeepComBat CVAE architecture}
 \usage{
-deepcombat_cvae(feature_dim, latent_dim, n_hidden = 3, n_batch, n_covariate)
+deepcombat_cvae(
+  feature_dim,
+  latent_dim,
+  n_hidden,
+  n_batch,
+  n_covariate,
+  vae_dim = NULL
+)
 }
 \arguments{
 \item{feature_dim}{Number of features to harmonize}
@@ -16,6 +23,8 @@ deepcombat_cvae(feature_dim, latent_dim, n_hidden = 3, n_batch, n_covariate)
 \item{n_batch}{Number of batches}
 
 \item{n_covariate}{Number of covariates}
+
+\item{vae_dim}{Custom VAE layer sizes of length (n_hidden + 2). Layers must be strictly decreasing in size.}
 }
 \value{
 nn_module object with desired architecture.

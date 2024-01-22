@@ -5,16 +5,19 @@
 \title{DeepComBat Harmonization}
 \usage{
 deepcombat_harmonize(
-  setup,
+  setup_obj,
   trained_model,
+  harmonize_obj = NULL,
   plot_logvars = FALSE,
   verbose = FALSE
 )
 }
 \arguments{
-\item{setup}{A deepcombat_setup_object.}
+\item{setup_obj}{A deepcombat_setup_object.}
 
 \item{trained_model}{A trained DeepComBat CVAE model from deepcombat_trainer.}
+
+\item{harmonize_obj}{Optional output from deepcombat_harmonize run on the training data. This output contains the pre-trained DeepComBat model as well as latent-space and residual ComBat estimands from the training data.}
 
 \item{plot_logvars}{A logical value indicating whether to plot the density of logvars according to dimension -- this may be useful for manual hyperparameter tuning. Default is FALSE.}
 
@@ -28,7 +31,7 @@ This function performs harmonization using DeepComBat. It takes in a setup objec
 }
 \examples{
 \dontrun{
-harmonized_output <- deepcombat_harmonize(setup_obj, trained_model, 
+harmonized_output <- deepcombat_harmonize(setup_obj, trained_model,
 plot_logvars = TRUE, verbose = TRUE)
 }
 
