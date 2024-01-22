@@ -35,7 +35,11 @@ DeepComBat is meant to be applied after initial preprocessing of the images to o
 
 The `DeepComBat` package provides four main functions for end-users.
 
-`deepcombat_setup()` is used to set up inputs for DeepComBat as well as initialize the DeepComBat CVAE. `deepcombat_train()` provides functionality for training the DeepComBat CVAE from the initialized `deepcombat_setup()` object. Finally, `deepcombat_harmonize()` takes outputs from `deepcombat_setup()` and `deepcombat_train()` and allows users to pass data through the trained DeepComBat CVAE and harmonize the data.
+`deepcombat_setup()` is used to set up inputs for DeepComBat as well as initialize the DeepComBat CVAE. 
+
+`deepcombat_train()` provides functionality for training the DeepComBat CVAE from the initialized `deepcombat_setup()` object.
+
+Finally, `deepcombat_harmonize()` takes outputs from `deepcombat_setup()` and `deepcombat_train()` and allows users to pass data through the trained DeepComBat CVAE and harmonize the data.
 
 Example code is provided below:
 ```
@@ -51,6 +55,7 @@ If users seek to use DeepComBat for external harmonization (ie train DeepComBat 
 
 If external harmonization is desired, we recommend using a regularized version of DeepComBat to improve out-of-sample performance. This can be accomplished by setting the `use_default_optim` parameter in `deepcombat_setup()` to "FALSE" and using the AdamW optimizer instead of the Adam optimizer (default) -- to do so, set the `optimizer` parameter in `deepcombat_trainer()` to `optim_adamw(setup_train$cvae$parameters, lr = 0.01))`
 
+Example code is provided below:
 ```
 # Train model using training data
 setup_train <- deepcombat_setup(~ age + sex + diagnosis, 
