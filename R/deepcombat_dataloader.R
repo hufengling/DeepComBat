@@ -119,7 +119,7 @@ create_model_matrices_from_train <- function(setup_input, covariate_formula, bat
   stopifnot("'batch_formula' can only have one variable."=
               !grepl(" ", deparse(batch_formula)))
   stopifnot("If reference batch is desired, 'reference_batch' must match one of the batch names in the 'covariate_matrix' column referred to by 'batch_formula'"=
-              is.null(reference_batch) | any(covariate_matrix[batch_formula[[2]]] == reference_batch))
+              is.null(reference_batch) | any(covariate_matrix[, as.character(batch_formula[[2]])] == reference_batch))
 
   # Helper function to adjust range of each column to be between 0 and 1
   range01_from_train <- function (df, setup_input) {
@@ -135,7 +135,7 @@ create_model_matrices_from_train <- function(setup_input, covariate_formula, bat
   # Generate model matrix objects of covariates and batch, excluding intercept
   covariate_mm <- model.matrix(covariate_formula, data = covariate_matrix)[, -1] # Remove intercept
   covariate_mm_01 <- range01_from_train(covariate_mm, setup_input)
-  covariate_matrix[batch_formula[[2]]] <- factor(pull(covariate_matrix, batch_formula[[2]]), levels = attr(setup_input$batch, "batch_names"))
+  covariate_matrix[, as.character(batch_formula[[2]])] <- factor(pull(covariate_matrix, batch_formula[[2]]), levels = attr(setup_input$batch, "batch_names"))
   batch_mm <- as.matrix(model.matrix(batch_formula, data = covariate_matrix)[, -1]) # Remove intercept and make sure batch_mm is always a 2D matrix (even if only one column)
   attr(batch_mm, "batch_names") <- attr(setup_input$batch, "batch_names")
   if (is.null(reference_batch)) {
